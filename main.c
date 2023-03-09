@@ -1,11 +1,12 @@
 #include <iostream>
+
 #include <vector>
 #include <array>
 #include <chrono>
 
 
 #pragma acc routine seq
-double& get_element(double* vec, size_t n, int i, int i2)
+inline double& get_element(double* vec, size_t n, int i, int i2)
 {
     return vec[i + n * i2];
 }
@@ -35,6 +36,10 @@ int main(int argc, char *argv[])
     auto begin = std::chrono::steady_clock::now();
     size_t n = std::stoi(argv[1]);
     double* vec = new double[n*n];
+    //vec[0] = 10;
+    //vec[n - 1] = 20;
+    //vec[n - 1 +  n*(n - 1)] = 30;
+    //vec[n*(n-1)] = 20;
     get_element(vec, n, 0, 0) = 10;
     get_element(vec, n, n - 1, 0) = 20;
     get_element(vec, n, n - 1, n - 1) = 30;
@@ -46,6 +51,9 @@ int main(int argc, char *argv[])
 #pragma acc parallel loop
     for (size_t i = 1; i < n - 1; ++i)
     {
+	//vec[i + n * i2]
+	//vec[ i ] = steps(vec, n, i, vec[0], vec[n-1]);
+	//vec[i + n*(n-1)] = steps(vec, n, i, vec[n*(n-1)],vec[n - 1 + n*(n-1)]);	
         get_element(vec, n, i, 0) = steps(vec, n, i, get_element(vec, n, 0, 0), get_element(vec, n, n - 1, 0));
         get_element(vec, n, i, n - 1) = steps(vec, n, i, get_element(vec, n, 0, n - 1), get_element(vec, n, n - 1, n - 1));
     }
@@ -57,8 +65,9 @@ int main(int argc, char *argv[])
         for (size_t j = 1; j < n - 1; ++j)
         {
 		double old_val = get_element(vec, n, j, i);
-            get_element(vec, n, i, j) = steps(vec, n, j, get_element(vec, n, i, 0), get_element(vec, n, i, n - 1));
-	    err = std::max(std::abs(get_element(vec, n, j, i) - old_val), err);
+           get_element(vec, n, i, j) = steps(vec, n, j, get_element(vec, n, i, 0), get_element(vec, n, i, n - 1));
+	   //vec [i + n*j] = steps(vec, n, j, vec[i], vec[i + n*(n-1)]);
+	   err = std::max(std::abs(vec[j + n*i] - old_val), err);
         }
     }
     }
@@ -68,7 +77,7 @@ int main(int argc, char *argv[])
     auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(end-begin);
     std::cout<<"time: "<<elapsed_ms.count()<<" mcs\n";
     std::cout<<"error: "<<err<<std::endl;
-   // print_matrix(vec, n);
+    //print_matrix(vec, n);
 
     delete[] vec;
     return 0;
