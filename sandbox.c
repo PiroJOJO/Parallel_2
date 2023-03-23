@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
         double max_error = error + 1;             
         while(error < max_error && it < iter)
 	    { 
-                max_erxror = 0;
+                max_error = 0;
                 it ++;
 #pragma acc data copy(max_error)              
 #pragma acc parallel loop collapse(2) independent reduction(max:max_error)
